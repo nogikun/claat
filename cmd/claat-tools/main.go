@@ -91,7 +91,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "build":
 		return runBuild(args[1:], stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "claat-manual: unknown command %q\n", args[0])
+		fmt.Fprintf(stderr, "claat-tools: unknown command %q\n", args[0])
 		usage(stderr)
 		return exitSystem
 	}
@@ -99,15 +99,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 func usage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  claat-manual lint MANUAL.md")
-	fmt.Fprintln(w, "  claat-manual build [-output DIR] MANUAL.md")
+	fmt.Fprintln(w, "  claat-tools lint MANUAL.md")
+	fmt.Fprintln(w, "  claat-tools build [-output DIR] MANUAL.md")
 }
 
 func runLint(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("lint", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.Usage = func() {
-		fmt.Fprintln(stderr, "Usage: claat-manual lint MANUAL.md")
+		fmt.Fprintln(stderr, "Usage: claat-tools lint MANUAL.md")
 	}
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -122,7 +122,7 @@ func runLint(args []string, stdout, stderr io.Writer) int {
 
 	diagnostics, err := lintFile(fs.Arg(0))
 	if err != nil {
-		fmt.Fprintf(stderr, "claat-manual: %s\n", err)
+		fmt.Fprintf(stderr, "claat-tools: %s\n", err)
 		return exitSystem
 	}
 	printDiagnostics(stderr, diagnostics)
@@ -136,7 +136,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("build", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.Usage = func() {
-		fmt.Fprintln(stderr, "Usage: claat-manual build [-output DIR] MANUAL.md")
+		fmt.Fprintln(stderr, "Usage: claat-tools build [-output DIR] MANUAL.md")
 	}
 	output := fs.String("output", "output", "directory for generated HTML")
 	fs.StringVar(output, "o", "output", "directory for generated HTML")
@@ -154,7 +154,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	input := fs.Arg(0)
 	diagnostics, err := lintFile(input)
 	if err != nil {
-		fmt.Fprintf(stderr, "claat-manual: %s\n", err)
+		fmt.Fprintf(stderr, "claat-tools: %s\n", err)
 		return exitSystem
 	}
 	printDiagnostics(stderr, diagnostics)
@@ -162,13 +162,13 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		return exitLint
 	}
 	if strings.TrimSpace(*output) == "" {
-		fmt.Fprintln(stderr, "claat-manual: output directory must not be empty")
+		fmt.Fprintln(stderr, "claat-tools: output directory must not be empty")
 		return exitSystem
 	}
 
 	claat, err := findClaat("claat")
 	if err != nil {
-		fmt.Fprintln(stderr, "claat-manual: claat was not found in PATH")
+		fmt.Fprintln(stderr, "claat-tools: claat was not found in PATH")
 		fmt.Fprintf(stderr, "install it with: %s\n", recommendedClaatInstall)
 		return exitSystem
 	}
@@ -177,7 +177,7 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		if errors.As(err, &exitErr) {
 			return exitErr.ExitCode()
 		}
-		fmt.Fprintf(stderr, "claat-manual: failed to run claat: %s\n", err)
+		fmt.Fprintf(stderr, "claat-tools: failed to run claat: %s\n", err)
 		return exitSystem
 	}
 	return exitOK

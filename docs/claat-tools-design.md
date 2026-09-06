@@ -1,4 +1,4 @@
-# `claat-manual` 設計（Go版）
+# `claat-tools` 設計（Go版）
 
 ## 結論
 
@@ -8,10 +8,10 @@
 
 ```console
 # 検査だけ
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 lint manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint manual.md
 
 # 検査に通った場合だけ HTML 化
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 build -output output manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output manual.md
 ```
 
 `claat` の Markdown パーサーや HTML レンダラーは再実装しない。Go 側は「入力規約の検査」と「`claat` の安全な起動」だけを担当する。
@@ -54,7 +54,7 @@ go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 build -output output man
 
 ## linter の位置づけ
 
-linter は必要であり、`claat-manual lint` を初版の必須機能とする。ただし、次の 2 種類を混ぜない。
+linter は必要であり、`claat-tools lint` を初版の必須機能とする。ただし、次の 2 種類を混ぜない。
 
 | 種類 | 目的 | 初版 |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ linter は必要であり、`claat-manual lint` を初版の必須機能とす�
 ### `lint`
 
 ```console
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 lint path/to/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint path/to/manual.md
 ```
 
 - エラーを `path:line:column: error CODE message` 形式で標準エラー出力に出す。
@@ -87,7 +87,7 @@ go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 lint path/to/manual.md
 ### `build`
 
 ```console
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 build -output output path/to/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output path/to/manual.md
 ```
 
 処理順は固定する。
@@ -107,18 +107,18 @@ go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 build -output output pat
 
 ```console
 go install github.com/googlecodelabs/tools/claat@v0.0.0-20240220115335-873fe39d02dc
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 lint dev/manual.md
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 build -output output dev/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint dev/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output dev/manual.md
 ```
 
 一度インストールして PATH から使いたい場合は次の形にする。
 
 ```console
-go install github.com/nogikun/claat/cmd/claat-manual@v0.1.0
-claat-manual lint dev/manual.md
+go install github.com/nogikun/claat/cmd/claat-tools@v0.1.0
+claat-tools lint dev/manual.md
 ```
 
-ローカル開発では `go run ./cmd/claat-manual lint dev/manual.md` とする。`go run package@version` は現在のプロジェクトの `go.mod` と分離して実行できるため、CI や利用者向けの例ではタグ付きバージョンを使う。`@latest` は試用時だけにする。
+ローカル開発では `go run ./cmd/claat-tools lint dev/manual.md` とする。`go run package@version` は現在のプロジェクトの `go.mod` と分離して実行できるため、CI や利用者向けの例ではタグ付きバージョンを使う。`@latest` は試用時だけにする。
 
 `claat` の自動取得を初版に含めないのは、OS ごとの実行ファイル配布とバージョン固定をこの小さなラッパーの責務に持ち込まないためである。公式リポジトリはアーカイブ済みなので、CI では `@latest` ではなく検証済みの配布物を固定する。
 
@@ -228,12 +228,12 @@ Typer のような CLI フレームワークは使わない。2 コマンドな�
 ```text
 go.mod
 cmd/
-└── claat-manual/
+└── claat-tools/
     ├── main.go
     └── main_test.go
 ```
 
-`cmd/claat-manual/main.go` に subcommand の dispatch、`flag.FlagSet`、小さな行スキャナー、診断出力、`claat` 起動を置く。複数の parser 層、プラグイン機構、設定ファイル、依存性注入は作らない。ファイルが大きくなった時だけ `manual.go` へ分割する。
+`cmd/claat-tools/main.go` に subcommand の dispatch、`flag.FlagSet`、小さな行スキャナー、診断出力、`claat` 起動を置く。複数の parser 層、プラグイン機構、設定ファイル、依存性注入は作らない。ファイルが大きくなった時だけ `manual.go` へ分割する。
 
 行スキャナーは次の状態だけ持つ。
 
@@ -252,7 +252,7 @@ module github.com/nogikun/claat
 go 1.24
 ```
 
-このリポジトリのモジュールパスは `github.com/nogikun/claat` とする。main package を `cmd/claat-manual` に置くことで、Google の `claat` と衝突しない `claat-manual` バイナリを提供できる。利用者は `go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0` と書ける。
+このリポジトリのモジュールパスは `github.com/nogikun/claat` とする。main package を `cmd/claat-tools` に置くことで、Google の `claat` と衝突しない `claat-tools` バイナリを提供できる。利用者は `go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0` と書ける。
 
 ### `claat` の起動
 
@@ -281,10 +281,10 @@ go 1.24
 完成条件は次のとおり。
 
 ```console
-go run ./cmd/claat-manual lint ..\try-claat\dev\sample.md
+go run ./cmd/claat-tools lint ..\try-claat\dev\sample.md
 # exit 0
 
-go run ./cmd/claat-manual build -output output ..\try-claat\dev\try-claat-guide.md
+go run ./cmd/claat-tools build -output output ..\try-claat\dev\try-claat-guide.md
 # lint 成功後に claat が実行され、output/<id>/ が生成される
 ```
 

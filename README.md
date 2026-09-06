@@ -1,4 +1,4 @@
-# claat-manual
+# claat-tools
 
 `manual.md` を lint してから、Google Codelabs の `claat` で HTML に変換する Go CLI です。
 
@@ -18,19 +18,19 @@ go install github.com/googlecodelabs/tools/claat@v0.0.0-20240220115335-873fe39d0
 入力規約だけを検査します。
 
 ```console
-go run ./cmd/claat-manual lint path/to/manual.md
+go run ./cmd/claat-tools lint path/to/manual.md
 ```
 
 検査に通った場合だけ HTML を生成します。
 
 ```console
-go run ./cmd/claat-manual build -output output path/to/manual.md
+go run ./cmd/claat-tools build -output output path/to/manual.md
 ```
 
 公開済みバージョンは、リポジトリから直接実行できます。
 
 ```console
-go run github.com/nogikun/claat/cmd/claat-manual@v0.1.0 lint manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint manual.md
 ```
 
-詳しい入力規約、lint ルール、テスト方針は [docs/claat-manual-design.md](docs/claat-manual-design.md) を参照してください。
+詳しい入力規約、lint ルール、テスト方針は [docs/claat-tools-design.md](docs/claat-tools-design.md) を参照してください。
