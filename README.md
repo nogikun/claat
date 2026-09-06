@@ -1,6 +1,16 @@
 # claat-tools
-
 `manual.md` を lint してから、Google Codelabs の `claat` で HTML に変換する Go CLI です。
+
+## スキルの導入
+
+このリポジトリの手順書作成・検証・HTML生成を行うには、3つのスキルを導入してください。
+
+```console
+npx skills add nogikun/claat
+```
+
+すべて一括で導入したい場合、下記コマンドを実行してください  
+`npx skills add nogikun/claat --skill claat-creator --skill claat-build --skill claat-writer`
 
 ## 前提
 
