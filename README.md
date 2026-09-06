@@ -1,4 +1,4 @@
-# claat-manual
+# claat-skill
 
 `manual.md` を lint してから、Google Codelabs の `claat` で HTML に変換する Go CLI です。
 
