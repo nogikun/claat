@@ -1,6 +1,6 @@
 ---
 name: claat-build
-description: claat 形式の Markdown（manual.md など）を入力として、このリポジトリの Go CLI を `go run ./cmd/claat-tools` で実行し、lint を通してから Google Codelabs 形式の HTML を生成する。lint 診断（META001〜ASSET001）を読み解いて、機械的に直せるものは直し、内容の判断が要るものは書き手に返す。ユーザーが「この manual.md をビルドして」「HTML にして」「codelab を生成して」「claat export を回して」「lint を通して」「手順書を変換して」と言ったとき、あるいは claat 形式の .md ファイルを渡して変換・検証・公開準備を求めたときは必ず使うこと。`claat` が PATH に無い、`Duration` が不正、画像が見つからないといったビルド失敗の原因調査にも使う。手順書そのものを書き起こす工程は claat-writer skill が担当する。
+description: claat 形式の Markdown（manual.md など）を入力として、Go CLI を `go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0` で実行し、lint を通してから Google Codelabs 形式の HTML を生成する。lint 診断（META001〜ASSET001）を読み解いて、機械的に直せるものは直し、内容の判断が要るものは書き手に返す。ユーザーが「この manual.md をビルドして」「HTML にして」「codelab を生成して」「claat export を回して」「lint を通して」「手順書を変換して」と言ったとき、あるいは claat 形式の .md ファイルを渡して変換・検証・公開準備を求めたときは必ず使うこと。`claat` が PATH に無い、`Duration` が不正、画像が見つからないといったビルド失敗の原因調査にも使う。手順書そのものを書き起こす工程は claat-writer skill が担当する。
 ---
 
 # claat 手順書ビルダー
@@ -24,16 +24,15 @@ go install github.com/googlecodelabs/tools/claat@v0.0.0-20240220115335-873fe39d0
 
 ## 実行する
 
-CLI は `./cmd/claat-tools` という相対パスで指定するため、**このリポジトリのルートで実行する**。入力ファイルが別のリポジトリにあっても構わない。その場合は入力を絶対パスで渡す。
+CLI は公開タグから直接実行する。**作業ディレクトリはどこでもよい。** 初回だけ Go がモジュールを取りに行く。
+claat 本体を開発していて手元の変更を試したいときだけ、このリポジトリのルートで `./cmd/claat-tools` に読み替える。
 
 ```console
-go run ./cmd/claat-tools lint path/to/manual.md
-go run ./cmd/claat-tools build -output output path/to/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint path/to/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output path/to/manual.md
 ```
 
 `build` は内部で同じ lint を先に回す。だが最初は `lint` を単独で回すこと。`build` は lint に落ちた時点で止まるので、診断を先に全部見てまとめて直したほうが往復が減る。
-
-リポジトリ外から実行したい場合の `go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0` という形は、**まだタグが打たれていないため現時点では動かない**。タグが公開されるまではリポジトリのルートで `./cmd/claat-tools` を使う。
 
 ## 終了コードの意味
 
