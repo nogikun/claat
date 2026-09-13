@@ -60,7 +60,7 @@ build が失敗したら直して再ビルドする。ただし**同じ文書で
 
 次の 3 つが揃って完了になる。ひとつでも欠けているなら「できました」と言わない。
 
-1. `go run ./cmd/claat-tools lint <file>` が終了コード 0
+1. `go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint <file>` が終了コード 0
 2. `output/<id>/index.html` が実在する
 3. 残っている宿題が一覧でユーザーに伝わっている
 

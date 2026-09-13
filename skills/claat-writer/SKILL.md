@@ -115,7 +115,7 @@ description: 入力されたコンテンツやコンテキスト（プロジェ�
 
 素の Markdown に加えて、claat は次を解釈する。使うと読者の助けになるが、使わなくても手順書は成立する。
 
-**注意ボックス。** claat のパーサー README にある `Positive` と `: 本文` を 2 行で書く形は、**このリポジトリが固定している claat のバージョンでは効かない**。`<p>Positive : 本文</p>` という素の段落になる。次のどちらかを使う。
+**注意ボックス。** claat のパーサー README にある `Positive` と `: 本文` を 2 行で書く形は、**claat-tools が固定している claat のバージョンでは効かない**。`<p>Positive : 本文</p>` という素の段落になる。次のどちらかを使う。
 
 ```text
 > aside positive
@@ -178,7 +178,7 @@ HTML を直接書いても同じ結果になる。
 日本語を直したあとに必ず回す。
 
 ```console
-go run ./cmd/claat-tools lint path/to/manual.md
+go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint path/to/manual.md
 ```
 
 終了コード 0 になるまで直す。エラーコードの読み方と HTML 生成は `claat-build` skill が担当するので、ここでは lint が通ることまで確認すればよい。
