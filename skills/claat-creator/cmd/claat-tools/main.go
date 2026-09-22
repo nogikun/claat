@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,8 @@ const (
 var (
 	idPattern        = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
 	durationPattern  = regexp.MustCompile(`^Duration:\s*(\d+):(\d{1,2}):(\d{2})$`)
+	srcAttribute     = regexp.MustCompile(`src="[^"]*\\[^"]*"`)
+	backslashRun     = regexp.MustCompile(`\\+`)
 	requiredMetadata = []string{
 		"summary",
 		"id",
@@ -180,7 +183,38 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "claat-tools: failed to run claat: %s\n", err)
 		return exitSystem
 	}
+	if err := normalizeAssetPaths(*output); err != nil {
+		fmt.Fprintf(stderr, "claat-tools: failed to normalize asset paths: %s\n", err)
+		return exitSystem
+	}
 	return exitOK
+}
+
+// claat（アーカイブ済み）は img の src を OS のパス区切りで書くため、Windows では
+// src="img\\x.png" になる。ブラウザは URL の \ を / として解釈するので img//x.png を
+// 取りに行き、画像が表示されない。生成後に src 属性の \ だけを / へ直す。
+func normalizeAssetPaths(output string) error {
+	return filepath.WalkDir(output, func(path string, entry fs.DirEntry, err error) error {
+		if errors.Is(err, fs.ErrNotExist) {
+			// claat が何も書かなかった場合は直すものが無い。ここで失敗させない。
+			return nil
+		}
+		if err != nil || entry.IsDir() || !strings.HasSuffix(strings.ToLower(path), ".html") {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		fixed := srcAttribute.ReplaceAllStringFunc(string(data), func(match string) string {
+			// claat は区切りを 2 つ重ねて書くので、連続した \ は 1 つの / に畳む。
+			return backslashRun.ReplaceAllString(match, "/")
+		})
+		if fixed == string(data) {
+			return nil
+		}
+		return os.WriteFile(path, []byte(fixed), 0o644)
+	})
 }
 
 func executeClaat(path, input, output string, stdout, stderr io.Writer) error {

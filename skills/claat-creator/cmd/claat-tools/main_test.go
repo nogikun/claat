@@ -171,6 +171,38 @@ func TestBuildRunsClaatAfterLint(t *testing.T) {
 	}
 }
 
+func TestBuildRewritesWindowsImagePaths(t *testing.T) {
+	path := writeManual(t, validManual)
+	output := t.TempDir()
+	generated := filepath.Join(output, "sample", "index.html")
+	originalFind := findClaat
+	originalRun := runClaat
+	t.Cleanup(func() {
+		findClaat = originalFind
+		runClaat = originalRun
+	})
+	findClaat = func(string) (string, error) {
+		return "fake-claat", nil
+	}
+	runClaat = func(_, _, _ string, _, _ io.Writer) error {
+		if err := os.MkdirAll(filepath.Dir(generated), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(generated, []byte(`<img alt="a\b" src="img\\one.png"><img src="img/two.png">`), 0o600)
+	}
+	if code := run([]string{"build", "-output", output, path}, &bytes.Buffer{}, &bytes.Buffer{}); code != exitOK {
+		t.Fatalf("code=%d", code)
+	}
+	data, err := os.ReadFile(generated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `<img alt="a\b" src="img/one.png"><img src="img/two.png">`
+	if string(data) != want {
+		t.Fatalf("got %q, want %q", data, want)
+	}
+}
+
 func writeManual(t *testing.T, contents string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "manual.md")
