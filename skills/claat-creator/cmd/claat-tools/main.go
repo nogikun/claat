@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,6 +25,8 @@ const (
 var (
 	idPattern        = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
 	durationPattern  = regexp.MustCompile(`^Duration:\s*(\d+):(\d{1,2}):(\d{2})$`)
+	srcAttribute     = regexp.MustCompile(`src="[^"]*\\[^"]*"`)
+	backslashRun     = regexp.MustCompile(`\\+`)
 	requiredMetadata = []string{
 		"summary",
 		"id",
@@ -180,7 +183,57 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "claat-tools: failed to run claat: %s\n", err)
 		return exitSystem
 	}
+	if err := normalizeAssetPaths(*output); err != nil {
+		fmt.Fprintf(stderr, "claat-tools: failed to normalize asset paths: %s\n", err)
+		return exitSystem
+	}
 	return exitOK
+}
+
+// claat が埋め込む配布元 storage.googleapis.com/claat-public は 403 を返すようになり、
+// スタイルも custom element も読み込めない（見出しだけが並んだ素の HTML になる）。
+// claat 本体はアーカイブ済みで直らないため、生きている配布元へ差し替える。
+// codelab-elements は Google が npm に出したものと同じ中身で、残り 2 つは
+// ES5 実装の custom element を今のブラウザで動かすために要る。
+var claatAssets = strings.NewReplacer(
+	"https://storage.googleapis.com/claat-public/codelab-elements.css",
+	"https://cdn.jsdelivr.net/npm/codelab-elements@1.0.1/codelab-elements.css",
+	"https://storage.googleapis.com/claat-public/codelab-elements.js",
+	"https://cdn.jsdelivr.net/npm/codelab-elements@1.0.1/codelab-elements.js",
+	"https://storage.googleapis.com/claat-public/native-shim.js",
+	"https://cdn.jsdelivr.net/npm/@webcomponents/webcomponentsjs@2.8.0/custom-elements-es5-adapter.js",
+	"https://storage.googleapis.com/claat-public/custom-elements.min.js",
+	"https://cdn.jsdelivr.net/npm/@webcomponents/custom-elements@1.6.0/custom-elements.min.js",
+	"https://storage.googleapis.com/claat-public/prettify.js",
+	"https://cdn.jsdelivr.net/npm/code-prettify@0.1.0/loader/prettify.js",
+)
+
+// claat（アーカイブ済み）は img の src を OS のパス区切りで書くため、Windows では
+// src="img\\x.png" になる。ブラウザは URL の \ を / として解釈するので img//x.png を
+// 取りに行き、画像が表示されない。生成後に src 属性の \ だけを / へ直す。
+func normalizeAssetPaths(output string) error {
+	return filepath.WalkDir(output, func(path string, entry fs.DirEntry, err error) error {
+		if errors.Is(err, fs.ErrNotExist) {
+			// claat が何も書かなかった場合は直すものが無い。ここで失敗させない。
+			return nil
+		}
+		if err != nil || entry.IsDir() || !strings.HasSuffix(strings.ToLower(path), ".html") {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		fixed := srcAttribute.ReplaceAllStringFunc(string(data), func(match string) string {
+			// claat は区切りを 2 つ重ねて書くので、連続した \ は 1 つの / に畳む。
+			return backslashRun.ReplaceAllString(match, "/")
+		})
+		fixed = claatAssets.Replace(fixed)
+		if fixed == string(data) {
+			return nil
+		}
+		return os.WriteFile(path, []byte(fixed), 0o644)
+	})
 }
 
 func executeClaat(path, input, output string, stdout, stderr io.Writer) error {
@@ -447,11 +500,11 @@ func checkImages(path, line string, lineNumber int, diagnostics *[]diagnostic) {
 			return
 		}
 		open := start + 2 + labelEnd + 1
-		close := strings.IndexByte(line[open+2:], ')')
+		close := strings.IndexByte(line[open+1:], ')')
 		if close < 0 {
 			return
 		}
-		destination := strings.TrimSpace(line[open+2 : open+2+close])
+		destination := strings.TrimSpace(line[open+1 : open+1+close])
 		destination = imageDestination(destination)
 		if destination != "" && isLocalPath(destination) {
 			imagePath := filepath.Join(filepath.Dir(path), filepath.FromSlash(destination))
@@ -460,7 +513,7 @@ func checkImages(path, line string, lineNumber int, diagnostics *[]diagnostic) {
 				*diagnostics = append(*diagnostics, diagnostic{path, lineNumber, start + 1, "ASSET001", fmt.Sprintf("local image not found: %s", destination)})
 			}
 		}
-		offset = open + 2 + close
+		offset = open + 1 + close
 	}
 }
 

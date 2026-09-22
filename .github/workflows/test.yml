@@ -1,0 +1,19 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+      # skill に同梱した main.go は、モジュール外から go run で動くことが配布の前提になる
+      # （標準ライブラリ以外を import した時点で、利用者側の実行だけが壊れる）
+      - run: cd "$(mktemp -d)" && go run "$GITHUB_WORKSPACE/skills/claat-creator/cmd/claat-tools/main.go" -h

@@ -8,11 +8,13 @@
 
 ```console
 # 検査だけ
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint manual.md
+go run skills/claat-creator/cmd/claat-tools/main.go lint manual.md
 
 # 検査に通った場合だけ HTML 化
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output manual.md
+go run skills/claat-creator/cmd/claat-tools/main.go build -output output manual.md
 ```
+
+CLI は `claat-creator` skill に同梱して配布する。`npx skills add nogikun/claat` がソースごとコピーするので、利用者側の導入手順は `claat`（Google Codelabs）を入れるだけになる。
 
 `claat` の Markdown パーサーや HTML レンダラーは再実装しない。Go 側は「入力規約の検査」と「`claat` の安全な起動」だけを担当する。
 
@@ -24,7 +26,7 @@ go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output manu
 - メタデータの後に `#` のページタイトルが 1 つある。
 - `##` 見出しが手順の境界で、直後に `Duration: H:M:SS` がある。
 - `###` 以降、コードフェンス、リンク、画像、表、チェックリストなどは手順本文としてそのまま扱う。
-- 現在の変換処理は Taskfile の `claat export -o output <file>` だけである。
+- 変換処理は `claat export -o output <file>` だけである。
 - `output/` は生成物であり、入力 Markdown と分離されている。
 - 本体リポジトリには、まだ CLI 実装も `docs/` もない。
 
@@ -76,7 +78,7 @@ linter は必要であり、`claat-tools lint` を初版の必須機能とする
 ### `lint`
 
 ```console
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint path/to/manual.md
+claat-tools lint path/to/manual.md
 ```
 
 - エラーを `path:line:column: error CODE message` 形式で標準エラー出力に出す。
@@ -87,7 +89,7 @@ go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint path/to/manual.md
 ### `build`
 
 ```console
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output path/to/manual.md
+claat-tools build -output output path/to/manual.md
 ```
 
 処理順は固定する。
@@ -103,22 +105,13 @@ go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output path
 
 ### 既存環境での使い方
 
-`go run` は Go CLI の取得・コンパイル・実行を担当し、`claat` は別途 PATH に用意する。
+同梱した `main.go` を `go run` にファイル指定で渡す。標準ライブラリだけに依存するため `go.mod` が無い場所でも、利用者のプロジェクトが別モジュールでも動く。2 回目以降はビルドキャッシュが効く。
 
 ```console
 go install github.com/googlecodelabs/tools/claat@v0.0.0-20240220115335-873fe39d02dc
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint dev/manual.md
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 build -output output dev/manual.md
+go run <skill>/cmd/claat-tools/main.go lint dev/manual.md
+go run <skill>/cmd/claat-tools/main.go build -output output dev/manual.md
 ```
-
-一度インストールして PATH から使いたい場合は次の形にする。
-
-```console
-go install github.com/nogikun/claat/cmd/claat-tools@v0.1.0
-claat-tools lint dev/manual.md
-```
-
-ローカル開発では `go run ./cmd/claat-tools lint dev/manual.md` とする。`go run package@version` は現在のプロジェクトの `go.mod` と分離して実行できるため、CI や利用者向けの例ではタグ付きバージョンを使う。`@latest` は試用時だけにする。
 
 `claat` の自動取得を初版に含めないのは、OS ごとの実行ファイル配布とバージョン固定をこの小さなラッパーの責務に持ち込まないためである。公式リポジトリはアーカイブ済みなので、CI では `@latest` ではなく検証済みの配布物を固定する。
 
@@ -217,9 +210,9 @@ Go 1.24+
   └─ 外部依存: なし
 ```
 
-Go 1.24.3 で動作確認する。`go run package@version` 自体は Go 1.17 以降で使えるが、初版の最低対応バージョンは実装時に CI で決める。
+Go 1.24.3 で動作確認する。CI の Go バージョンは `go.mod` の `go` ディレクティブに従わせ、二重管理しない。
 
-Typer のような CLI フレームワークは使わない。2 コマンドなら標準 `flag.FlagSet` と短い usage で十分であり、外部依存なしで `go run` の初回取得を速くできる。コマンドが増えて help の階層化や completion が本当に必要になった時だけ Cobra を検討する。
+Typer のような CLI フレームワークは使わない。2 コマンドなら標準 `flag.FlagSet` と短い usage で十分であり、外部依存なしでビルドを速くできる。コマンドが増えて help の階層化や completion が本当に必要になった時だけ Cobra を検討する。
 
 ## 実装方針
 
@@ -233,7 +226,7 @@ cmd/
     └── main_test.go
 ```
 
-`cmd/claat-tools/main.go` に subcommand の dispatch、`flag.FlagSet`、小さな行スキャナー、診断出力、`claat` 起動を置く。複数の parser 層、プラグイン機構、設定ファイル、依存性注入は作らない。ファイルが大きくなった時だけ `manual.go` へ分割する。
+`skills/claat-creator/cmd/claat-tools/main.go` に subcommand の dispatch、`flag.FlagSet`、小さな行スキャナー、診断出力、`claat` 起動を置く。複数の parser 層、プラグイン機構、設定ファイル、依存性注入は作らない。ファイルが大きくなった時だけ `manual.go` へ分割する。
 
 行スキャナーは次の状態だけ持つ。
 
@@ -252,7 +245,7 @@ module github.com/nogikun/claat
 go 1.24
 ```
 
-このリポジトリのモジュールパスは `github.com/nogikun/claat` とする。main package を `cmd/claat-tools` に置くことで、Google の `claat` と衝突しない `claat-tools` バイナリを提供できる。利用者は `go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0` と書ける。
+このリポジトリのモジュールパスは `github.com/nogikun/claat` とする。main package を `skills/claat-creator/cmd/claat-tools` に置くことで、Google の `claat` と衝突しない `claat-tools` という名前を保ったまま、`npx skills add` の配布物にソースを同梱できる。
 
 ### `claat` の起動
 
@@ -266,7 +259,7 @@ go 1.24
 
 ## テストと受け入れ条件
 
-フレームワークを増やさず、次の最小テストを `go test ./...` で実行する。
+フレームワークを増やさず、次の最小テストを `go test ./...` で実行する。CI（`.github/workflows/test.yml`）はこれに加えて、**モジュール外からの `go run <file>` が通ること**だけを確認する。skill に同梱して配布する以上、標準ライブラリ以外を import した瞬間に利用者側の実行だけが壊れるため、それを検出できるのはこの 1 コマンドしかない。
 
 1. `try-claat` の `dev/sample.md` が lint を通る。
 2. 必須キー欠落、重複キー、不正な `status`、危険な `id` を検出する。
@@ -281,10 +274,10 @@ go 1.24
 完成条件は次のとおり。
 
 ```console
-go run ./cmd/claat-tools lint ..\try-claat\dev\sample.md
+go run skills/claat-creator/cmd/claat-tools/main.go lint ..\try-claat\dev\sample.md
 # exit 0
 
-go run ./cmd/claat-tools build -output output ..\try-claat\dev\try-claat-guide.md
+go run skills/claat-creator/cmd/claat-tools/main.go build -output output ..\try-claat\dev\try-claat-guide.md
 # lint 成功後に claat が実行され、output/<id>/ が生成される
 ```
 
@@ -292,9 +285,9 @@ go run ./cmd/claat-tools build -output output ..\try-claat\dev\try-claat-guide.m
 
 ### Python + Typer で作る
 
-Typer は help や subcommand を整理しやすいが、このツールでは Go の `go run` と標準ライブラリで同じ目的を満たせる。Python 環境を増やす理由ができるまでは採用しない。
+Typer は help や subcommand を整理しやすいが、このツールでは Go と標準ライブラリで同じ目的を満たせる。Python 環境を増やす理由ができるまでは採用しない。
 
-### `go run` 実行時に `claat` をダウンロードする
+### `claat-tools` 実行時に `claat` をダウンロードする
 
 OS、CPU、配布物の署名・ハッシュ、キャッシュ、更新方針まで必要になる。初版は PATH 上の `claat` を使い、CI 側でバージョンを固定する。
 

@@ -4,21 +4,20 @@
 
 ## スキルの導入
 
-このリポジトリの手順書作成・検証・HTML生成を行うには、3つのスキルを導入してください。
+手順書の執筆から HTML 生成までを 1 つのスキルで行います。
 
 ```console
 npx skills add nogikun/claat
 ```
 
-すべて一括で導入したい場合、下記コマンドを実行してください  
-`npx skills add nogikun/claat --skill claat-creator --skill claat-build --skill claat-writer`
-
 ## 前提
 
 - Go 1.24+
-- PATH 上の `claat`
+- PATH 上の `claat`（Google Codelabs）
 
-`claat` が未導入なら、検証済みのバージョンを指定してインストールします。
+CLI 本体は `skills/claat-creator/cmd/claat-tools/` に置いてあり、`npx skills add` でスキルごとコピーされます。**別途インストールは不要です。** 標準ライブラリしか使わないので `go.mod` も要りません。
+
+`claat` だけは別に入れてください。未導入なら、検証済みのバージョンを指定します。
 
 ```console
 go install github.com/googlecodelabs/tools/claat@v0.0.0-20240220115335-873fe39d02dc
@@ -29,19 +28,23 @@ go install github.com/googlecodelabs/tools/claat@v0.0.0-20240220115335-873fe39d0
 入力規約だけを検査します。
 
 ```console
-go run ./cmd/claat-tools lint path/to/manual.md
+go run skills/claat-creator/cmd/claat-tools/main.go lint path/to/manual.md
 ```
 
 検査に通った場合だけ HTML を生成します。
 
 ```console
-go run ./cmd/claat-tools build -output output path/to/manual.md
+go run skills/claat-creator/cmd/claat-tools/main.go build -output output path/to/manual.md
 ```
 
-公開済みバージョンは、リポジトリから直接実行できます。
+スキル経由で使う場合は、導入先（`.agents/skills/claat-creator/cmd/claat-tools/main.go`）を同じように `go run` に渡します。
+
+## 開発
+
+コミットテンプレートを使う場合は 1 回だけ設定します。
 
 ```console
-go run github.com/nogikun/claat/cmd/claat-tools@v0.1.0 lint manual.md
+git config --local commit.template .commit-template
 ```
 
 詳しい入力規約、lint ルール、テスト方針は [docs/claat-tools-design.md](docs/claat-tools-design.md) を参照してください。

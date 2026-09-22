@@ -111,6 +111,16 @@ func TestLintChecksLocalImages(t *testing.T) {
 	if !hasCode(diagnostics, "ASSET001") {
 		t.Fatalf("missing image diagnostic: %v", diagnostics)
 	}
+	// 存在する画像を報告しないこと、パスを 1 文字も削らずに報告することまで見る。
+	var reported []string
+	for _, d := range diagnostics {
+		if d.code == "ASSET001" {
+			reported = append(reported, d.message)
+		}
+	}
+	if len(reported) != 1 || !strings.Contains(reported[0], "missing.png") {
+		t.Fatalf("want one diagnostic naming missing.png, got %v", reported)
+	}
 }
 
 func TestBuildDoesNotRunClaatWhenLintFails(t *testing.T) {
@@ -158,6 +168,48 @@ func TestBuildRunsClaatAfterLint(t *testing.T) {
 	}
 	if gotPath != "fake-claat" || gotInput != path || gotOutput != "generated" {
 		t.Fatalf("claat args: path=%q input=%q output=%q", gotPath, gotInput, gotOutput)
+	}
+}
+
+func TestBuildRewritesWindowsImagePaths(t *testing.T) {
+	path := writeManual(t, validManual)
+	output := t.TempDir()
+	generated := filepath.Join(output, "sample", "index.html")
+	originalFind := findClaat
+	originalRun := runClaat
+	t.Cleanup(func() {
+		findClaat = originalFind
+		runClaat = originalRun
+	})
+	findClaat = func(string) (string, error) {
+		return "fake-claat", nil
+	}
+	runClaat = func(_, _, _ string, _, _ io.Writer) error {
+		if err := os.MkdirAll(filepath.Dir(generated), 0o755); err != nil {
+			return err
+		}
+		contents := `<link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">` +
+			`<script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>` +
+			`<img alt="a\b" src="img\\one.png"><img src="img/two.png">`
+		return os.WriteFile(generated, []byte(contents), 0o600)
+	}
+	if code := run([]string{"build", "-output", output, path}, &bytes.Buffer{}, &bytes.Buffer{}); code != exitOK {
+		t.Fatalf("code=%d", code)
+	}
+	data, err := os.ReadFile(generated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `src="img/one.png"`) || strings.Contains(string(data), `img//`) {
+		t.Fatalf("image path not fixed: %s", data)
+	}
+	// 生きていない配布元が 1 つでも残ると、スタイルも custom element も読み込めない。
+	if strings.Contains(string(data), "claat-public") {
+		t.Fatalf("dead asset host left in output: %s", data)
+	}
+	if !strings.Contains(string(data), "cdn.jsdelivr.net/npm/codelab-elements@") ||
+		!strings.Contains(string(data), "custom-elements-es5-adapter.js") {
+		t.Fatalf("assets not rewritten: %s", data)
 	}
 }
 
