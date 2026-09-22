@@ -190,6 +190,24 @@ func runBuild(args []string, stdout, stderr io.Writer) int {
 	return exitOK
 }
 
+// claat が埋め込む配布元 storage.googleapis.com/claat-public は 403 を返すようになり、
+// スタイルも custom element も読み込めない（見出しだけが並んだ素の HTML になる）。
+// claat 本体はアーカイブ済みで直らないため、生きている配布元へ差し替える。
+// codelab-elements は Google が npm に出したものと同じ中身で、残り 2 つは
+// ES5 実装の custom element を今のブラウザで動かすために要る。
+var claatAssets = strings.NewReplacer(
+	"https://storage.googleapis.com/claat-public/codelab-elements.css",
+	"https://cdn.jsdelivr.net/npm/codelab-elements@1.0.1/codelab-elements.css",
+	"https://storage.googleapis.com/claat-public/codelab-elements.js",
+	"https://cdn.jsdelivr.net/npm/codelab-elements@1.0.1/codelab-elements.js",
+	"https://storage.googleapis.com/claat-public/native-shim.js",
+	"https://cdn.jsdelivr.net/npm/@webcomponents/webcomponentsjs@2.8.0/custom-elements-es5-adapter.js",
+	"https://storage.googleapis.com/claat-public/custom-elements.min.js",
+	"https://cdn.jsdelivr.net/npm/@webcomponents/custom-elements@1.6.0/custom-elements.min.js",
+	"https://storage.googleapis.com/claat-public/prettify.js",
+	"https://cdn.jsdelivr.net/npm/code-prettify@0.1.0/loader/prettify.js",
+)
+
 // claat（アーカイブ済み）は img の src を OS のパス区切りで書くため、Windows では
 // src="img\\x.png" になる。ブラウザは URL の \ を / として解釈するので img//x.png を
 // 取りに行き、画像が表示されない。生成後に src 属性の \ だけを / へ直す。
@@ -210,6 +228,7 @@ func normalizeAssetPaths(output string) error {
 			// claat は区切りを 2 つ重ねて書くので、連続した \ は 1 つの / に畳む。
 			return backslashRun.ReplaceAllString(match, "/")
 		})
+		fixed = claatAssets.Replace(fixed)
 		if fixed == string(data) {
 			return nil
 		}

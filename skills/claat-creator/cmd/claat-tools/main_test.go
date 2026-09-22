@@ -188,7 +188,10 @@ func TestBuildRewritesWindowsImagePaths(t *testing.T) {
 		if err := os.MkdirAll(filepath.Dir(generated), 0o755); err != nil {
 			return err
 		}
-		return os.WriteFile(generated, []byte(`<img alt="a\b" src="img\\one.png"><img src="img/two.png">`), 0o600)
+		contents := `<link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">` +
+			`<script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>` +
+			`<img alt="a\b" src="img\\one.png"><img src="img/two.png">`
+		return os.WriteFile(generated, []byte(contents), 0o600)
 	}
 	if code := run([]string{"build", "-output", output, path}, &bytes.Buffer{}, &bytes.Buffer{}); code != exitOK {
 		t.Fatalf("code=%d", code)
@@ -197,9 +200,16 @@ func TestBuildRewritesWindowsImagePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `<img alt="a\b" src="img/one.png"><img src="img/two.png">`
-	if string(data) != want {
-		t.Fatalf("got %q, want %q", data, want)
+	if !strings.Contains(string(data), `src="img/one.png"`) || strings.Contains(string(data), `img//`) {
+		t.Fatalf("image path not fixed: %s", data)
+	}
+	// 生きていない配布元が 1 つでも残ると、スタイルも custom element も読み込めない。
+	if strings.Contains(string(data), "claat-public") {
+		t.Fatalf("dead asset host left in output: %s", data)
+	}
+	if !strings.Contains(string(data), "cdn.jsdelivr.net/npm/codelab-elements@") ||
+		!strings.Contains(string(data), "custom-elements-es5-adapter.js") {
+		t.Fatalf("assets not rewritten: %s", data)
 	}
 }
 
