@@ -447,11 +447,11 @@ func checkImages(path, line string, lineNumber int, diagnostics *[]diagnostic) {
 			return
 		}
 		open := start + 2 + labelEnd + 1
-		close := strings.IndexByte(line[open+2:], ')')
+		close := strings.IndexByte(line[open+1:], ')')
 		if close < 0 {
 			return
 		}
-		destination := strings.TrimSpace(line[open+2 : open+2+close])
+		destination := strings.TrimSpace(line[open+1 : open+1+close])
 		destination = imageDestination(destination)
 		if destination != "" && isLocalPath(destination) {
 			imagePath := filepath.Join(filepath.Dir(path), filepath.FromSlash(destination))
@@ -460,7 +460,7 @@ func checkImages(path, line string, lineNumber int, diagnostics *[]diagnostic) {
 				*diagnostics = append(*diagnostics, diagnostic{path, lineNumber, start + 1, "ASSET001", fmt.Sprintf("local image not found: %s", destination)})
 			}
 		}
-		offset = open + 2 + close
+		offset = open + 1 + close
 	}
 }
 

@@ -111,6 +111,16 @@ func TestLintChecksLocalImages(t *testing.T) {
 	if !hasCode(diagnostics, "ASSET001") {
 		t.Fatalf("missing image diagnostic: %v", diagnostics)
 	}
+	// 存在する画像を報告しないこと、パスを 1 文字も削らずに報告することまで見る。
+	var reported []string
+	for _, d := range diagnostics {
+		if d.code == "ASSET001" {
+			reported = append(reported, d.message)
+		}
+	}
+	if len(reported) != 1 || !strings.Contains(reported[0], "missing.png") {
+		t.Fatalf("want one diagnostic naming missing.png, got %v", reported)
+	}
 }
 
 func TestBuildDoesNotRunClaatWhenLintFails(t *testing.T) {

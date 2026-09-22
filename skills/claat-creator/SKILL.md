@@ -197,6 +197,8 @@ go run <skill>/cmd/claat-tools/main.go lint path/to/manual.md
 
 1 と 2 を混同しない。1 は文書を直す話で、2 は環境を直す話になる。
 
+ただし `go run` 経由ではシェルが受け取る `$?` は**失敗なら常に 1 になる**（Go が本来の終了コードを `exit status N` として標準エラーに出し、自分は 1 で終わるため）。`$?` で分岐せず、標準エラーの最終行を読んで判断する。`claat was not found in PATH` のように、2 の場合はメッセージが環境の話だと明示している。
+
 診断は `path:line:column: error CODE message` の形で標準エラーに出る。
 
 ```text
